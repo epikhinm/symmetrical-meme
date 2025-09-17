@@ -1,6 +1,6 @@
 TOP=10
 DIR=testdata
-CC=clang-18
+CC=clang-20
 
 # .PHONY: testdata
 testdata:
@@ -11,6 +11,9 @@ testdata:
 
 	# Manual constant to have ~1GB input file
 	python3 generate.py 25400000 | shuf > $(DIR)/test.1g.in
+
+	# Manual constant to have ~10GB input file
+	python3 generate.py 254000000 | shuf > testdata/test.10g.in
 
 .PHONY: evict
 evict:
@@ -30,6 +33,10 @@ boring: evict
 	time sort -k2 -n -r $(DIR)/test.1g.in | cut -d ' ' -f1 | head -$(TOP) > $(DIR)/test.1g.out
 	cat $(DIR)/test.1g.out
 
+	@echo "\n\n💤Getting top $(TOP) lines from 10g file\n"
+	time sort -k2 -n -r $(DIR)/test.10g.in | cut -d ' ' -f1 | head -$(TOP) > $(DIR)/test.10g.out
+	cat $(DIR)/test.10g.out
+
 .PHONY: sane
 sane: evict
 	@echo "This is expected solution to discuss. I think it's overkill already but why not"
@@ -37,21 +44,33 @@ sane: evict
 
 	@echo "\n\n💤Getting top $(TOP) lines from 1m file\n"
 	echo "$(DIR)/test.1m.in" | time ./sane > $(DIR)/sane.1m.out
+	cat $(DIR)/sane.1m.out
 
 	@echo "\n\n💤Getting top $(TOP) lines from 1g file\n"
 	echo "$(DIR)/test.1g.in" | time ./sane > $(DIR)/sane.1g.out
+	cat $(DIR)/sane.1g.out
+
+	@echo "\n\n💤Getting top $(TOP) lines from 10g file\n"
+	echo "$(DIR)/test.10g.in" | time ./sane > $(DIR)/sane.10g.out
+	cat $(DIR)/sane.10g.out
 
 .PHONY: insane
-insane:
+insane: evict
 	@echo "❗This is my insane solution to discuss. 🤪"
 	@echo "❗There is no reason on earth to do this way but LET'S HAVE FUN 🤪\n"
-	$(CC) -O2 insane.c -o insane
+	$(CC) -O2 -march=native -g  insane.c -o insane
 
 	@echo "\n\n💤Getting top $(TOP) lines from 1m file\n"
-	echo "$(DIR)/test.1m.in" | ./insane
+	echo "$(DIR)/test.1m.in" | time ./insane > $(DIR)/insane.1m.out
+	cat $(DIR)/insane.1m.out
 
-# 	@echo "\n\n💤Getting top $(TOP) lines from 1g file\n"
-# 	echo "$(DIR)/test.1g.in" | time ./insane > $(DIR)/insane.1g.out
+	@echo "\n\n💤Getting top $(TOP) lines from 1g file\n"
+	echo "$(DIR)/test.1g.in" | time ./insane > $(DIR)/insane.1g.out
+	cat $(DIR)/insane.1g.out
+
+	@echo "\n\n💤Getting top $(TOP) lines from 10g file\n"
+	echo "$(DIR)/test.10g.in" | time ./insane > $(DIR)/insane.10g.out
+	cat $(DIR)/insane.10g.out
 
 
 test:

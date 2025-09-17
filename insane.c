@@ -28,9 +28,6 @@ const ull SEGMENT_BLOCK_SIZE = 512;
 // disks, more than Here we expected that segment_size more than a single row
 // const ull SEGMENT_SIZE = 1024 * 8; // 8KB
 const ull SEGMENT_SIZE = 1024 * 1024; // 1MB
-// const ull SEGMENT_SIZE = 1024 * 1024; // 4MB
-// const ull SEGMENT_SIZE = 1024 * 1024 * 16; // 16MB
-// const ull SEGMENT_SIZE = 1024 * 1024 * 128; // 16MB
 
 const ull QUEUE_DEPTH =
     16; // This number defines how many requests we can have in flight
@@ -63,7 +60,6 @@ typedef struct {
   char **urls;
   size_t size;
   size_t max;
-  ull min_value;
 } dumb_heap;
 
 // This structure is used to lock segments during processing
@@ -185,7 +181,7 @@ dumb_heap *dbheap_create(size_t max) {
   h->counts = malloc(max * sizeof(ull));
   h->urls = malloc(max * sizeof(char *));
   for (size_t i = 0; i < max; i++) {
-    h->urls[i] = malloc(2048 * sizeof(char)); // TODO
+    h->urls[i] = malloc(SEGMENT_BLOCK_SIZE * sizeof(char)); // TODO 2048
   }
   h->size = 0;
   h->max = max;
@@ -284,9 +280,8 @@ void *thread_main(void *arguments) {
     close(fd);
     // printf("Read %zu bytes of len: %zu\n", read_n, s->len);
 
-    // Here we can process the buffer
-    // int j = 0;
-    char url[2048];
+
+    char url[SEGMENT_BLOCK_SIZE]; // 2048?
     ull c = 0;
     memset(url, 0, sizeof(url));
     for (int i = 0, j = 0, k = 0; i < read_n; i++) {
@@ -315,12 +310,9 @@ void *thread_main(void *arguments) {
 
   // Merge thread-local heap to result heap
   pthread_mutex_lock(&(a->mu));
-  // dbheap_print(a->heap);
   dbheap_merge(a->heap, h);
   pthread_mutex_unlock(&(a->mu));
 
-  // dbheap_print(h);
-  // free(arguments);
   dbheap_free(h);
   // printf("Thread %d finished\n", tid);
 
@@ -351,6 +343,7 @@ int main() {
 
   volatile size_t counter = 0;
 
+  // Yes, looks like it should be in dedicated method-constructor
   args arguments;
   arguments.mu = (pthread_mutex_t)PTHREAD_MUTEX_INITIALIZER;
   arguments.counter = 0;
@@ -372,8 +365,6 @@ int main() {
       perror("Failed to join thread");
       exit(1);
     }
-    // dbheap_merge(h, arguments.heap[i]);
-    // dbheap_free(arguments.heap[i]);
   }
 
   dbheap_print(arguments.heap);

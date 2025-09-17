@@ -341,8 +341,6 @@ int main() {
   }
   int queue_depth = QUEUE_DEPTH;
 
-  volatile size_t counter = 0;
-
   // Yes, looks like it should be in dedicated method-constructor
   args arguments;
   arguments.mu = (pthread_mutex_t)PTHREAD_MUTEX_INITIALIZER;
